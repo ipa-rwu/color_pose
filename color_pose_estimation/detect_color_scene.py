@@ -1,163 +1,83 @@
-import cv2 as cv2
-import os
+import cv2
 import numpy as np
 import imutils
 
+def detect(img, color_space="HSV"):
 
-def detect(img):
+    if color_space == 'HSV':
+        color_frame = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        color_ranges = {
+            "yellow": (np.array([15, 20, 180]), np.array([35, 255, 255])),
+            "blue": (np.array([100, 70, 80]), np.array([130, 255, 255])),
+            "green": (np.array([40, 30, 110]), np.array([80, 255, 255])),
+            # Lower range for red
+            "red1": (np.array([0, 120, 70]), np.array([10, 255, 255])),
+            # Upper range for red
+            "red2": (np.array([160, 120, 70]), np.array([180, 255, 255])),
+        }
+    elif color_space == 'Lab':
+        color_frame = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
+        color_ranges = {
+            "yellow": (np.array([20, 110, 180]), np.array([100, 128, 255])),
+            "blue": (np.array([20, 80, 110]), np.array([100, 127, 150])),
+            "green": (np.array([20, 50, 80]), np.array([100, 128, 127])),
+            "red": (np.array([20, 150, 150]), np.array([60, 255, 255])),
+        }
+    elif color_space == 'YCrCB':
+        color_ranges = {
+            "yellow": (np.array([60, 100, 100]), np.array([100, 255, 255])),
+            "blue": (np.array([20, 50, 80]), np.array([100, 255, 255])),
+            "green": (np.array([30, 100, 60]), np.array([90, 255, 255])),
+            # Lower range for red
+            "red1": (np.array([0, 100, 100]), np.array([10, 255, 255])),
+            # Upper range for red
+            "red2": (np.array([170, 100, 100]), np.array([180, 255, 255])),
+        }
+        color_frame = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    else:
+        raise ValueError("Invalid color space. Choose 'HSV' or 'Lab'.")
 
-    # hsv = hue, saturation, value
-    hsv_frame = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    kernel = np.ones((4,4), np.uint8)
+    opening = cv2.morphologyEx(color_frame, cv2.MORPH_OPEN, kernel)
+    color_frame = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel)
 
-    # specify yellow range that should be detected
-    low_yellow = np.array([15, 20, 180])
-    high_yellow = np.array([35, 255, 255])
-    yellow_mask = cv2.inRange(hsv_frame, low_yellow, high_yellow)
-    yellow = cv2.bitwise_and(img, img, mask=yellow_mask)
-    masked_img_yellow = yellow_mask.astype(np.uint8)
+    if color_space == 'HSV' or color_space == 'YCrCB':
+        red_mask1 = cv2.inRange(color_frame, *color_ranges["red1"])
+        red_mask2 = cv2.inRange(color_frame, *color_ranges["red2"])
+        red_mask = cv2.bitwise_or(red_mask1, red_mask2)
+        color_masks = {color: cv2.inRange(color_frame, low, high) for color, (low, high) in color_ranges.items() if color not in ["red1", "red2"]}
+        color_masks["red"] = red_mask  # Add the combined red mask
+    else:
+        color_masks = {color: cv2.inRange(color_frame, low, high) for color, (low, high) in color_ranges.items()}
 
-    # specify blue range that should be detected
-    low_blue = np.array([100, 70, 80])
-    high_blue = np.array([130, 255, 255])
-    blue_mask = cv2.inRange(hsv_frame, low_blue, high_blue)
-    blue = cv2.bitwise_and(img, img, mask=blue_mask)
 
-    # cv2.imshow("Blue", blue)
-    # cv2.imshow("mask", blue_mask)
+    contours = {color: imutils.grab_contours(cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE))
+                for color, mask in color_masks.items()}
 
-    masked_img_blue = blue_mask.astype(np.uint8)
+    results = {}
+    for color, cnts in contours.items():
+        largest = 0
+        second_largest = 0
+        largest_rect = (0, 0, 0, 0)
+        second_largest_rect = (0, 0, 0, 0)
 
-    # specify red range that should be detected
-    low_red = np.array([135, 50, 80])
-    high_red = np.array([180, 255, 255])
-    red_mask = cv2.inRange(hsv_frame, low_red, high_red)
-    red = cv2.bitwise_and(img, img, mask=red_mask)
-    masked_img_red = red_mask.astype(np.uint8)
+        for contour in cnts:
+            rect = cv2.boundingRect(contour)
+            x, y, w, h = rect
+            area = w * h
+            if area > largest:
+                largest, second_largest = area, largest
+                largest_rect, second_largest_rect = rect, largest_rect
+            elif area > second_largest:
+                second_largest = area
+                second_largest_rect = rect
 
-    # specify green range that should be detected
-    low_green = np.array([40, 30, 110])
-    high_green = np.array([80, 255, 255])
-    green_mask = cv2.inRange(hsv_frame, low_green, high_green)
-    green = cv2.bitwise_and(img, img, mask=green_mask)
-    masked_img_green = green_mask.astype(np.uint8)
+        results[color] = (second_largest_rect, largest_rect)
 
-    # find contours in the thresholded image
-    cnts_green = cv2.findContours(
-        masked_img_green.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts_green = imutils.grab_contours(cnts_green)
+    for color, ((x1, y1, w1, h1), (x2, y2, w2, h2)) in results.items():
+        cv2.rectangle(img, (x1, y1), (x1 + w1, y1 + h1), (255, 0, 0), 2)
+        cv2.rectangle(img, (x2, y2), (x2 + w2, y2 + h2), (255, 0, 0), 2)
+        cv2.putText(img, f'{color}_cube_holder', (x2, y2 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
+        cv2.putText(img, f'{color}_cube', (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
 
-    # find contours in the thresholded image
-    cnts_red = cv2.findContours(
-        masked_img_red.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts_red = imutils.grab_contours(cnts_red)
-
-    # find contours in the thresholded image
-    cnts_yellow = cv2.findContours(
-        masked_img_yellow.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts_yellow = imutils.grab_contours(cnts_yellow)
-
-    # find contours in the thresholded image
-    cnts_blue = cv2.findContours(
-        masked_img_blue.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts_blue = imutils.grab_contours(cnts_blue)
-
-    # print("[INFO] {} unique contours found".format(len(cnts)))
-    l_w_h = 0
-    ll_w_h = 0
-    l_rect_blue = 0, 0, 0, 0
-    l_rect_red = 0, 0, 0, 0
-    l_rect_yellow = 0, 0, 0, 0
-    l_rect_green = 0, 0, 0, 0
-
-    ll_rect_green = 0, 0, 0, 0
-    ll_rect_blue = 0, 0, 0, 0
-    ll_rect_red = 0, 0, 0, 0
-    ll_rect_yellow = 0, 0, 0, 0
-    ll_rect_green = 0, 0, 0, 0
-
-    # sometimes small particles are detected, too - filter the largest rectangle
-    for contour in cnts_green:
-        rect = cv2.boundingRect(contour)
-        x, y, w, h = rect
-        if w*h > l_w_h:
-            l_w_h = w*h
-            ll_rect_green = l_rect_green
-            l_rect_green = rect
-            continue
-        if w*h > ll_w_h: 
-            ll_w_h =w*h
-            ll_rect_green = rect
-    cv2.rectangle(img, (ll_rect_green[0], ll_rect_green[1]), (ll_rect_green[0]+ll_rect_green[2], ll_rect_green[1]+ll_rect_green[3]), (255,0,0), 2)
-    cv2.rectangle(img, (l_rect_green[0], l_rect_green[1]), (l_rect_green[0]+l_rect_green[2], l_rect_green[1]+l_rect_green[3]), (255,0,0), 2)
-
-    cv2.putText(img, 'green_cube_holder', (l_rect_green[0], l_rect_green[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-    cv2.putText(img, 'green_cube', (ll_rect_green[0], ll_rect_green[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-
-    
-    l_w_h = 0
-    ll_w_h = 0
-    for contour in cnts_blue:
-        rect = cv2.boundingRect(contour)
-        x, y, w, h = rect
-        if w*h > l_w_h:
-            l_w_h = w*h
-            ll_rect_blue = l_rect_blue
-            l_rect_blue = rect
-            continue
-        if w*h > ll_w_h: 
-            ll_w_h =w*h
-            ll_rect_blue = rect
-    cv2.rectangle(img, (ll_rect_blue[0], ll_rect_blue[1]), (ll_rect_blue[0]+ll_rect_blue[2], ll_rect_blue[1]+ll_rect_blue[3]), (255,0,0), 2)
-    cv2.rectangle(img, (l_rect_blue[0], l_rect_blue[1]), (l_rect_blue[0]+l_rect_blue[2], l_rect_blue[1]+l_rect_blue[3]), (255,0,0), 2)
-
-    cv2.putText(img, 'blue_cube_holder', (l_rect_blue[0], l_rect_blue[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-    cv2.putText(img, 'blue_cube', (ll_rect_blue[0], ll_rect_blue[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-    
-    l_w_h = 0
-    ll_w_h = 0
-    for contour in cnts_red:
-        rect = cv2.boundingRect(contour)
-        x, y, w, h = rect
-        if w*h > l_w_h:
-            l_w_h = w*h
-            ll_rect_red = l_rect_red
-            l_rect_red = rect
-            continue
-        if w*h > ll_w_h: 
-            ll_w_h =w*h
-            ll_rect_red = rect
-    cv2.rectangle(img, (ll_rect_red[0], ll_rect_red[1]), (ll_rect_red[0]+ll_rect_red[2], ll_rect_red[1]+ll_rect_red[3]), (255,0,0), 2)
-    cv2.rectangle(img, (l_rect_red[0], l_rect_red[1]), (l_rect_red[0]+l_rect_red[2], l_rect_red[1]+l_rect_red[3]), (255,0,0), 2)
-
-    cv2.putText(img, 'red_cube_holder', (l_rect_red[0], l_rect_red[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-    cv2.putText(img, 'red_cube', (ll_rect_red[0], ll_rect_red[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-
-    
-    l_w_h = 0
-    ll_w_h = 0
-    for contour in cnts_yellow:
-        rect = cv2.boundingRect(contour)
-        x, y, w, h = rect
-        if w*h > l_w_h:
-            l_w_h = w*h
-            ll_rect_yellow = l_rect_yellow
-            l_rect_yellow = rect
-            continue
-        if w*h > ll_w_h: 
-            ll_w_h =w*h
-            ll_rect_yellow = rect
-    
-    cv2.rectangle(img, (ll_rect_yellow[0], ll_rect_yellow[1]), (ll_rect_yellow[0]+ll_rect_yellow[2], ll_rect_yellow[1]+ll_rect_yellow[3]), (255,0,0), 2)
-    cv2.rectangle(img, (l_rect_yellow[0], l_rect_yellow[1]), (l_rect_yellow[0]+l_rect_yellow[2], l_rect_yellow[1]+l_rect_yellow[3]), (255,0,0), 2)
-
-    cv2.putText(img, 'yellow_cube_holder', (l_rect_yellow[0], l_rect_yellow[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-    cv2.putText(img, 'yellow_cube', (ll_rect_yellow[0], ll_rect_yellow[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
-
-    
-    color_array=(ll_rect_green, l_rect_green, ll_rect_blue, l_rect_blue,ll_rect_red, l_rect_red,ll_rect_yellow, l_rect_yellow)
-    
-        
-    #cv2.imshow("Masks", img)
-    #key = cv2.waitKey(1)
-
-    return color_array, img
+    return results, img
