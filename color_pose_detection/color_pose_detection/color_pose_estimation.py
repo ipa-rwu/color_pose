@@ -5,9 +5,9 @@ import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
 import sensor_msgs.msg as sensor_msgs
-import color_pose_estimation.registration as reg
-import color_pose_estimation.detect_color as cdet
-import color_pose_estimation.detect_color_scene as cdet_s
+import color_pose_detection.registration as reg
+import color_pose_detection.detect_color as cdet
+import color_pose_detection.detect_color_scene as cdet_s
 import color_pose_msgs.msg
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from cv_bridge import CvBridge  # Package to convert between ROS and OpenCV Images
