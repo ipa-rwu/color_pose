@@ -74,10 +74,7 @@ class Color_Pose_Estimation(Node):
             image, desired_encoding="bgr8")
         #print(self.current_frame.shape)
 
-        # cv2.imshow("image", self.current_frame)
-        # key = cv2.waitKey(1)
-
-       # CV2 bridge for depth image in CV2 format
+        # CV2 bridge for depth image in CV2 format
         depth_image = self.br.imgmsg_to_cv2(depth, "passthrough")
         depth_array = np.array(depth_image, dtype=np.float32)
 
@@ -126,116 +123,93 @@ class Color_Pose_Estimation(Node):
         self.color_array.header.frame_id = "world"
         # if (rect[2]<10 or rect[3]<10):
         #    return
-        for rect in rect_array:
-            # center of pointcloud from edges of bounding box
-            center_image_x = int(rect[0]+(rect[2]/2))
-            center_image_y = int(rect[1]+(rect[3]/2))
+        for color, rectangles in rect_array.items():
+            print(f'Color: {color}')
 
-            # get corresponding depth values from depth map with pixel from RGB
-            depth_1 = depth_array[center_image_y, center_image_x]*0.001
-            depth_2 = depth_array[rect[1], rect[0]]*0.001
+            # Rectacle contains 1. Box 2. Holder
+            is_box = True
+            for rect in rectangles: 
+                # center of pointcloud from edges of bounding box
+                center_image_x = int(rect[0]+(rect[2]/2))
+                center_image_y = int(rect[1]+(rect[3]/2))
 
-            # self.camera_model = image_geometry.PinholeCameraModel()
-            # self.camera_model.fromCameraInfo(camera_info)
+                # get corresponding depth values from depth map with pixel from RGB
+                depth_1 = depth_array[center_image_y, center_image_x]*0.001
+                depth_2 = depth_array[rect[1], rect[0]]*0.001
 
-            center_point = self.convert_pixel_to_point(
-                center_image_x, center_image_y, depth_1, camera_info, _intrinsics)
-            corner_point = self.convert_pixel_to_point(
-                rect[0], rect[1], depth_2, camera_info, _intrinsics)
-            # ray = np.array(self.camera_model.projectPixelTo3dRay((center_image_x,center_image_y)))
+                self.camera_model = image_geometry.PinholeCameraModel()
+                self.camera_model.fromCameraInfo(camera_info)
 
-            # ray_z = [el / ray[2] for el in ray]  # normalize the ray so its Z-component equals 1.0
-            # pt = [el * depth_1 for el in ray_z]  # multiply the ray by the depth; its Z-component should now equal the depth value
-            # color_pixel = rs2.rs2_project_point_to_pixel(_intrinsics, (center_point))
-            # print(color_pixel)
+                center_point = self.convert_pixel_to_point(center_image_x, center_image_y, depth_1, camera_info, _intrinsics)
+                corner_point = self.convert_pixel_to_point(rect[0], rect[1], depth_2, camera_info, _intrinsics)
 
-            size_y = (center_point[0]-corner_point[0])*3
-            size_x = (center_point[1]-corner_point[1])*3
+                size_y = (center_point[0]-corner_point[0])*3
+                size_x = (center_point[1]-corner_point[1])*3
 
-            # print(size_y, size_x)
-            size = np.array([size_y, size_x, 0.4])
+                # print(size_y, size_x)
+                size = np.array([size_y, size_x, 0.4])
 
-            # Define bounding box of object in Poincloud Coordinate system
-            center = np.array(
-                [center_point[0], center_point[1], center_point[2]])
+                # Define bounding box of object in Poincloud Coordinate system
+                center = np.array([center_point[0], center_point[1], center_point[2]])
 
-            r = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-            bbox = o3d.geometry.OrientedBoundingBox(center, r, size)
+                r = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+                bbox = o3d.geometry.OrientedBoundingBox(center, r, size)
 
-            # visualize the bounding box and crop the pointcloud around the bounding box coordinates
-            # o3d.visualization.draw_geometries([self.o3d_pcd, bbox])
-            try:
-                self.o3d_pcd = self.o3d_pcd.crop(bbox)
-            except Exception as e:
-                self.get_logger().error("Exception occurred: {0}".format(e))
+                # visualize the bounding box and crop the pointcloud around the bounding box coordinates
+                # o3d.visualization.draw_geometries([self.o3d_pcd, bbox])
+                try:
+                    self.o3d_pcd = self.o3d_pcd.crop(bbox)
+                except Exception as e:
+                    self.get_logger().error("Exception occurred: {0}".format(e))
 
-            o3d.io.write_point_cloud("copy_of_fragment.ply", self.o3d_pcd)
-
-            self.center = center
-            #print(self.center[0], self.center[1])
-
-            # Pointcloud matching with the cropped bounding box
-            # returns a transformation matrix 4x4 consisting of
-            # the rotation and translation within the cropped area
-            # print(self.o3d_pcd)
-
-            # start = time.time()
-            # self.transformation_matrix = reg.register(self.o3d_pcd)
-            # end = time.time()
-            # print(end-start)
-            # print("here")
-            # time.sleep(0.25)
-            # transform the received pose in Point Cloud Coordinate System to
-            # World coordinates and publish it as a color pose message
-            self.transform_pose()
-        #print(self.color_array)
-
-        self.publisher_color_pose_array.publish(self.color_array)
+                if is_box:
+                    self.transform_pose(center, f'{color}_box')
+                    is_box = False
+                else:
+                    self.transform_pose(center, f'{color}_holder')
+                    
 
     def convert_pixel_to_point(self, x, y, depth, cameraInfo, _intrinsics):
         result = rs2.rs2_deproject_pixel_to_point(_intrinsics, [x, y], depth)
         return result
 
-    def transform_pose(self):
+    def transform_pose(self, center, object):
 
         try:
             # Look up the transform from "frame1" to "frame2"
             transform = self.tfBuffer.lookup_transform(
                 "camera_depth_optical_frame", "world", rclpy.time.Time(), timeout=rclpy.time.Duration(seconds=1))
 
-            # Create a pose stamped message in "frame1"
-            pose = PoseStamped()
-            print("color_pose generated")
-            pose.header.frame_id = "camera_depth_optical_frame"
-            pose.pose.position.x = self.center[0]-0.015
-            pose.pose.position.y = self.center[1]
-            pose.pose.position.z = self.center[2]
-            pose.pose.orientation.x = 0.0
-            pose.pose.orientation.y = 0.0
-            pose.pose.orientation.z = 0.0
-            pose.pose.orientation.w = 1.0
-
-            # Transform the pose to "frame2"
-            transformed_pose = self.tfBuffer.transform(
-                pose, "world", timeout=rclpy.time.Duration(seconds=1))
-
-            color_pose = color_pose_msgs.msg.ColorPose()
-            color_pose.header.frame_id = transformed_pose.header.frame_id
-            color_pose.pose.position.x = transformed_pose.pose.position.x
-            color_pose.pose.position.y = transformed_pose.pose.position.y
-            color_pose.pose.position.z = transformed_pose.pose.position.z
-            color_pose.pose.orientation.x = 0.0
-            color_pose.pose.orientation.y = 0.0
-            color_pose.pose.orientation.z = 0.0
-            color_pose.pose.orientation.w = 1.0
-            color_pose.color = 1
-
-            # Publish the transformed pose
-            self.publisher_color_pose.publish(color_pose)
-            self.color_array.color_poses.append(color_pose)
-
         except Exception as e:
             self.get_logger().error("Exception occurred: {0}".format(e))
+        
+        # Create a pose stamped message in "frame1"
+        pose = PoseStamped()
+        print("color_pose generated")
+        pose.header.frame_id = "camera_depth_optical_frame"
+        pose.pose.position.x = center[0]-0.015
+        pose.pose.position.y = center[1]
+        pose.pose.position.z = center[2]
+        pose.pose.orientation.w = 1.0
+
+        try:
+            # Transform the pose to "frame2"
+            transformed_pose = self.tfBuffer.transform(pose, "world", timeout=rclpy.time.Duration(seconds=1))
+        except Exception as e:
+            self.get_logger().error("Exeception occured: {0}".format(e))
+
+        color_pose = color_pose_msgs.msg.ColorPose()
+        color_pose.header.frame_id = transformed_pose.header.frame_id
+        color_pose.pose.position.x = transformed_pose.pose.position.x
+        color_pose.pose.position.y = transformed_pose.pose.position.y
+        color_pose.pose.position.z = transformed_pose.pose.position.z
+        color_pose.pose.orientation.w = 1.0
+        color_pose.color = object
+
+        # Publish the transformed pose
+        self.publisher_color_pose.publish(color_pose)
+        self.color_array.color_poses.append(color_pose)
+        self.publisher_color_pose_array.publish(self.color_array)
 
 
 def main(args=None):

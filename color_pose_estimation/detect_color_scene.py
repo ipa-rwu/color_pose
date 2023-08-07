@@ -8,7 +8,7 @@ def detect(img, color_space="HSV"):
         color_frame = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         color_ranges = {
             "yellow": (np.array([15, 20, 180]), np.array([35, 255, 255])),
-            "blue": (np.array([100, 70, 80]), np.array([130, 255, 255])),
+            "blue": (np.array([110, 50, 50]), np.array([130, 255, 255])),
             "green": (np.array([40, 30, 110]), np.array([80, 255, 255])),
             # Lower range for red
             "red1": (np.array([0, 120, 70]), np.array([10, 255, 255])),
