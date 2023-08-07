@@ -192,6 +192,7 @@ class Color_Pose_Estimation(Node):
         pose.pose.position.z = center[2]
         pose.pose.orientation.w = 1.0
 
+        transformed_pose = None
         try:
             # Transform the pose to "frame2"
             transformed_pose = self.tfBuffer.transform(pose, "world", timeout=rclpy.time.Duration(seconds=1))
@@ -204,7 +205,7 @@ class Color_Pose_Estimation(Node):
         color_pose.pose.position.y = transformed_pose.pose.position.y
         color_pose.pose.position.z = transformed_pose.pose.position.z
         color_pose.pose.orientation.w = 1.0
-        color_pose.color = object
+        color_pose.color = str(object)
 
         # Publish the transformed pose
         self.publisher_color_pose.publish(color_pose)
