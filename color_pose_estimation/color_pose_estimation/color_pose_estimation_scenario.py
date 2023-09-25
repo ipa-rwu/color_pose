@@ -45,11 +45,11 @@ class ColorPoseEstimation(Node):
             self.tfBuffer, self, spin_thread=True)
         self.tf_broadcaster = TransformBroadcaster(self)
         self.image_sub = Subscriber(
-            self, sensor_msgs.Image, "/camera/color/image_raw", qos_profile=qos_profile_sensor_data)
+            self, sensor_msgs.Image, "/camera/camera/color/image_raw", qos_profile=qos_profile_sensor_data)
         self.aligned_depth_sub = Subscriber(
-            self, sensor_msgs.Image, "/camera/aligned_depth_to_color/image_raw", qos_profile=qos_profile_sensor_data)
+            self, sensor_msgs.Image, "/camera/camera/aligned_depth_to_color/image_raw", qos_profile=qos_profile_sensor_data)
         self.camera_info_sub = Subscriber(
-            self, sensor_msgs.CameraInfo, "/camera/aligned_depth_to_color/camera_info")
+            self, sensor_msgs.CameraInfo, "/camera/camera/aligned_depth_to_color/camera_info")
         self.ts = ApproximateTimeSynchronizer(
             [self.image_sub, self.aligned_depth_sub, self.camera_info_sub], 10, 0.1,)
         self.camera_frame = "camera_depth_optical_frame"
@@ -61,7 +61,7 @@ class ColorPoseEstimation(Node):
         self.publisher_color_pose = self.create_publisher(
             color_pose_msgs.msg.ColorPose, '/color_pose_estimation/color_pose', 10)
         self.publisher_color_pose_array = self.create_publisher(
-            color_pose_msgs.msg.ColorPoseArray, '/color_pose_estimation/color_pose_array', 10)
+            color_pose_msgs.msg.ColorPoseArray, '/color_pose_estimation/color_pose_array2', 10)
 
 
     def adjust_gamma(self, image, gamma=1.0):
@@ -82,7 +82,7 @@ class ColorPoseEstimation(Node):
         
         beta = -50 # Brightness control (0-100)
 
-        self.current_frame = self.adjust_gamma(self.current_frame, 0.3)
+        # self.current_frame = self.adjust_gamma(self.current_frame, 0.3)
 
 
 

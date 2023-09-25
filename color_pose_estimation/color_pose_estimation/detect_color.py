@@ -6,14 +6,14 @@ import imutils
 YELLOW_LOW = np.array([15, 20, 180])
 YELLOW_HIGH = np.array([35, 255, 255])
 
-BLUE_LOW = np.array([100, 70, 80])
-BLUE_HIGH = np.array([130, 255, 255])
+BLUE_LOW = np.array([120, 200, 120])
+BLUE_HIGH = np.array([148, 255, 255])
 
-RED_LOW =  np.array([173, 100, 100])
-RED_HIGH = np.array([190, 255, 255])
+RED_LOW =  np.array([0, 150, 180])
+RED_HIGH = np.array([20, 255, 255])
 
-GREEN_LOW = np.array([40, 30, 110])
-GREEN_HIGH = np.array([80, 255, 255])
+GREEN_LOW = np.array([106, 200, 120])
+GREEN_HIGH = np.array([120, 255, 255])
 
 COLOR_RANGES = (YELLOW_LOW, YELLOW_HIGH, BLUE_LOW, BLUE_HIGH, RED_LOW, RED_HIGH, GREEN_LOW, GREEN_HIGH)
 COLOR_NAMES = ("Yellow", "Blue", "Red", "Green")
