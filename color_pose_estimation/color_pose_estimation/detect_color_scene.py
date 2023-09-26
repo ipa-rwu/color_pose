@@ -3,17 +3,29 @@ import os
 import numpy as np
 import imutils
 
-YELLOW_LOW = np.array([30, 80, 180])
-YELLOW_HIGH = np.array([40, 255, 255])
+# YELLOW_LOW = np.array([30, 80, 180])
+# YELLOW_HIGH = np.array([40, 255, 255])
 
-BLUE_LOW = np.array([120, 200, 120])
-BLUE_HIGH = np.array([148, 255, 255])
+# BLUE_LOW = np.array([120, 200, 120])
+# BLUE_HIGH = np.array([148, 255, 255])
 
-RED_LOW =  np.array([0, 150, 180])
+# RED_LOW =  np.array([0, 150, 180])
+# RED_HIGH = np.array([20, 255, 255])
+
+# GREEN_LOW = np.array([106, 200, 120])
+# GREEN_HIGH = np.array([120, 255, 255])
+
+YELLOW_LOW = np.array([15, 20, 180])
+YELLOW_HIGH = np.array([35, 255, 255])
+
+BLUE_LOW = np.array([90, 60, 50])
+BLUE_HIGH = np.array([145, 255, 255])
+
+RED_LOW = np.array([0, 100, 50])
 RED_HIGH = np.array([20, 255, 255])
 
-GREEN_LOW = np.array([106, 200, 120])
-GREEN_HIGH = np.array([120, 255, 255])
+GREEN_LOW = np.array([30, 60, 50])
+GREEN_HIGH = np.array([115, 255, 255])
 
 COLOR_RANGES = (YELLOW_LOW, YELLOW_HIGH, BLUE_LOW, BLUE_HIGH, RED_LOW, RED_HIGH, GREEN_LOW, GREEN_HIGH)
 COLOR_NAMES = ("Yellow", "Blue", "Red", "Green")
@@ -61,14 +73,14 @@ def filter_largest_rectangles(cnts):
 # detect rectangular color ranges in the image  
 def detect(img):
     color_array = {};
-    print(int(len(COLOR_RANGES)/2))
+    # print(int(len(COLOR_RANGES)/2))
     for i in range (0, int(len(COLOR_RANGES)), 2):
-        print("here is i")
-        print(i)
+        # print("here is i")
+        # print(i)
         masked_img = define_color_range(COLOR_RANGES[i], COLOR_RANGES[i+1], img)
         contours = find_contours(masked_img)
         second_largest_rectangle, largest_rectangle = filter_largest_rectangles(contours)
-        print(second_largest_rectangle)
+        # print(second_largest_rectangle)
         if (second_largest_rectangle[2]> 50 and second_largest_rectangle[3]>50 and largest_rectangle[2]>70 and largest_rectangle[3]>70):
             color_array[COLOR_DETECTIONS[i]]=second_largest_rectangle
             cv2.rectangle(img, (second_largest_rectangle[0], second_largest_rectangle[1]), (second_largest_rectangle[0]+second_largest_rectangle[2], second_largest_rectangle[1]+second_largest_rectangle[3]), (255,0,0), 2)

@@ -5,8 +5,6 @@ import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
 import sensor_msgs.msg as sensor_msgs
-import color_pose_estimation.registration as reg
-import color_pose_estimation.detect_color as cdet
 import color_pose_estimation.detect_color_scene as cdet_s
 import color_pose_msgs.msg
 from message_filters import ApproximateTimeSynchronizer, Subscriber
@@ -61,7 +59,7 @@ class ColorPoseEstimation(Node):
         self.publisher_color_pose = self.create_publisher(
             color_pose_msgs.msg.ColorPose, '/color_pose_estimation/color_pose', 10)
         self.publisher_color_pose_array = self.create_publisher(
-            color_pose_msgs.msg.ColorPoseArray, '/color_pose_estimation/color_pose_array2', 10)
+            color_pose_msgs.msg.ColorPoseArray, '/color_pose_estimation/color_pose_array', 10)
 
 
     def adjust_gamma(self, image, gamma=1.0):
