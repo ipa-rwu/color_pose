@@ -37,7 +37,7 @@ document = """
       pose:
         position:
           x: -0.162
-          y: -0.067
+          y: -0.066
           z: 0.855
         orientation:
           x: -0.7072353
@@ -88,7 +88,7 @@ document = """
       pose:
         position:
           x: -0.162
-          y: -0.067
+          y: -0.066
           z: 0.855
         orientation:
           x: -0.7072353
