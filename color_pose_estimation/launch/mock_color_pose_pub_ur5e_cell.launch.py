@@ -38,7 +38,7 @@ document = """
         position:
           x: -0.215
           y: -0.04
-          z: -1.065
+          z: 1.065
         orientation:
           x: 0.707
           y: 0.707
@@ -55,7 +55,7 @@ document = """
         position:
           x: -0.117
           y: 0.046
-          z: 1.059
+          z: 1.065
         orientation:
           x: 0.707
           y: 0.707
@@ -72,7 +72,7 @@ document = """
         position:
           x: -0.216
           y: 0.126
-          z: -1.065
+          z: 1.065
         orientation:
           x: 0.707
           y: 0.707
@@ -89,7 +89,7 @@ document = """
         position:
           x: -0.216
           y: -0.04
-          z: -1.065
+          z: 1.065
         orientation:
           x: 0.707
           y: 0.707
@@ -106,7 +106,7 @@ document = """
         position:
           x: -0.315
           y: 0.046
-          z: 1.067
+          z: 1.065
         orientation:
           x: 0.707
           y: 0.707
@@ -123,7 +123,7 @@ document = """
         position:
           x: -0.216
           y: 0.126
-          z: -1.065
+          z: 1.065
         orientation:
           x: 0.707
           y: 0.707
@@ -142,6 +142,8 @@ def generate_launch_description():
     )
 
     ld.add_action(
-        ExecuteProcess(cmd=[[FindExecutable(name="ros2"), " {}".format(cmd_str)]], shell=True)
+        ExecuteProcess(
+            cmd=[[FindExecutable(name="ros2"), " {}".format(cmd_str)]], shell=True
+        )
     )
     return ld
