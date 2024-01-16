@@ -38,7 +38,7 @@ document = """
         position:
           x: -0.215
           y: -0.04
-          z: 1.065
+          z: 1.062
         orientation:
           x: 0.707
           y: 0.707
@@ -55,7 +55,7 @@ document = """
         position:
           x: -0.117
           y: 0.046
-          z: 1.065
+          z: 1.063
         orientation:
           x: 0.707
           y: 0.707
@@ -72,7 +72,7 @@ document = """
         position:
           x: -0.216
           y: 0.126
-          z: 1.065
+          z: 1.062
         orientation:
           x: 0.707
           y: 0.707
@@ -89,7 +89,7 @@ document = """
         position:
           x: -0.216
           y: -0.04
-          z: 1.065
+          z: 1.063
         orientation:
           x: 0.707
           y: 0.707
@@ -106,7 +106,7 @@ document = """
         position:
           x: -0.315
           y: 0.046
-          z: 1.065
+          z: 1.062
         orientation:
           x: 0.707
           y: 0.707
@@ -123,7 +123,7 @@ document = """
         position:
           x: -0.216
           y: 0.126
-          z: 1.065
+          z: 1.063
         orientation:
           x: 0.707
           y: 0.707
